@@ -10,15 +10,27 @@ import { Patient } from "@/types";
 function FitBounds({ patients }: { patients: Patient[] }) {
     const map = useMap();
 
+    // Stabilize the effect by creating a key based on coordinates
+    // This prevents re-fitting when the array reference changes but points are the same
+    const boundsKey = patients
+        .map(p => `${p.id}-${p.coordinates?.lat.toFixed(5)}-${p.coordinates?.lng.toFixed(5)}`)
+        .join('|');
+
     useEffect(() => {
         const validPoints = patients
             .filter(p => p.coordinates)
             .map(p => [p.coordinates!.lat, p.coordinates!.lng] as [number, number]);
 
         if (validPoints.length > 0) {
-            map.fitBounds(validPoints, { padding: [50, 50] });
+            // Only fit bounds if we have valid points
+            map.fitBounds(validPoints, {
+                padding: [50, 50],
+                maxZoom: 15, // Prevent zooming in too close automatically
+                animate: true
+            });
         }
-    }, [patients, map]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [boundsKey, map]); // Depend on the stable key, not the patients array object
 
     return null;
 }
