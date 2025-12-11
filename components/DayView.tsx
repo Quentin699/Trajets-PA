@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Patient, DayRoute } from "@/types";
 import { geocodeAddress, optimizeRoute, getDrivingRoute } from "@/lib/optimization";
-import { ArrowLeft, RefreshCw, Wand2, ListOrdered, Navigation, Phone, MapPin, Search } from "lucide-react";
+import { ArrowLeft, RefreshCw, Wand2, ListOrdered, Navigation, Phone, MapPin, Search, Map as MapIcon, List as ListIcon } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,16 +23,20 @@ export default function DayView({ initialRoute }: DayViewProps) {
     const [mode, setMode] = useState<"strict" | "optimized">("strict");
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [routePath, setRoutePath] = useState<[number, number][]>([]);
+
+    // New State for Mobile View Toggle
+    const [mobileView, setMobileView] = useState<"list" | "map">("list");
+
     const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
     // --- Effects & Logic (Kept from original) ---
 
     // Scroll into view
     useEffect(() => {
-        if (selectedId && itemRefs.current[selectedId]) {
+        if (selectedId && itemRefs.current[selectedId] && mobileView === "list") {
             itemRefs.current[selectedId]?.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-    }, [selectedId]);
+    }, [selectedId, mobileView]);
 
     // Initial Geocoding
     useEffect(() => {
@@ -143,8 +147,16 @@ export default function DayView({ initialRoute }: DayViewProps) {
         if (patient) openEditModal(patient);
     };
 
+    // Helper to generate Google Maps URL
+    const getGoogleMapsUrl = (patient: Patient) => {
+        if (patient.coordinates) {
+            return `https://www.google.com/maps/dir/?api=1&destination=${patient.coordinates.lat},${patient.coordinates.lng}`;
+        }
+        return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(patient.address || "")}`;
+    };
+
     return (
-        <div className="flex flex-col md:flex-row h-screen bg-slate-50 overflow-hidden relative">
+        <div className="flex flex-col md:flex-row h-[100dvh] bg-slate-50 overflow-hidden relative">
 
             {/* Address Correction Modal */}
             <AnimatePresence>
@@ -198,11 +210,40 @@ export default function DayView({ initialRoute }: DayViewProps) {
                 )}
             </AnimatePresence>
 
-            {/* --- SIDEBAR --- */}
-            <aside className="w-full md:w-[450px] bg-white z-20 shadow-2xl flex flex-col border-r border-slate-100 relative">
+            {/* --- MOBILE TOGGLE (Floating) --- */}
+            <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-white rounded-full shadow-2xl border border-slate-100 p-1.5 flex transition-transform active:scale-95 ring-2 ring-emerald-500/20">
+                <button
+                    onClick={() => setMobileView("list")}
+                    className={clsx(
+                        "rounded-full px-5 py-2.5 text-sm font-bold flex items-center transition-all",
+                        mobileView === "list"
+                            ? "bg-slate-800 text-white shadow-md"
+                            : "text-slate-500 hover:bg-slate-50"
+                    )}
+                >
+                    <ListIcon className="w-4 h-4 mr-2" /> Liste
+                </button>
+                <button
+                    onClick={() => setMobileView("map")}
+                    className={clsx(
+                        "rounded-full px-5 py-2.5 text-sm font-bold flex items-center transition-all",
+                        mobileView === "map"
+                            ? "bg-emerald-500 text-white shadow-md shadow-emerald-200"
+                            : "text-slate-500 hover:bg-slate-50"
+                    )}
+                >
+                    <MapIcon className="w-4 h-4 mr-2" /> Carte
+                </button>
+            </div>
+
+            {/* --- SIDEBAR (List View) --- */}
+            <aside className={clsx(
+                "w-full md:w-[450px] bg-white z-20 shadow-2xl flex flex-col border-r border-slate-100 absolute md:relative inset-0 md:inset-auto h-full transition-transform duration-300 md:translate-x-0 bg-slate-50/50",
+                mobileView === "list" ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+            )}>
 
                 {/* Header */}
-                <div className="p-6 bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-10">
+                <div className="p-6 bg-white/95 backdrop-blur-md border-b border-slate-100 sticky top-0 z-10">
                     <div className="flex items-center gap-4 mb-6">
                         <Link href="/" className="p-2 -ml-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400 hover:text-slate-800">
                             <ArrowLeft className="w-5 h-5" />
@@ -250,7 +291,7 @@ export default function DayView({ initialRoute }: DayViewProps) {
                 </div>
 
                 {/* Patient List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24 md:pb-4">
                     <AnimatePresence>
                         {displayedPatients.map((patient, idx) => (
                             <motion.div
@@ -261,7 +302,13 @@ export default function DayView({ initialRoute }: DayViewProps) {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.2 }}
                                 ref={(el) => { if (el) itemRefs.current[patient.id] = el; }}
-                                onClick={() => setSelectedId(patient.id)}
+                                onClick={() => {
+                                    setSelectedId(patient.id);
+                                    // Optional: Switch to map on mobile when clicking a patient, 
+                                    // but user asked for scroll fix, so keeping in list view is safer unless explicitly asked.
+                                    // uncomment next line to auto-switch:
+                                    // if (window.innerWidth < 768) setMobileView("map"); 
+                                }}
                             >
                                 <div className={clsx(
                                     "p-4 rounded-xl border transition-all cursor-pointer relative group",
@@ -330,7 +377,7 @@ export default function DayView({ initialRoute }: DayViewProps) {
                                                 </a>
                                             )}
                                             <a
-                                                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(patient.address || "")}`}
+                                                href={getGoogleMapsUrl(patient)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center transition-colors shadow-sm"
@@ -347,7 +394,10 @@ export default function DayView({ initialRoute }: DayViewProps) {
             </aside>
 
             {/* --- MAP AREA --- */}
-            <main className="flex-1 relative h-[55vh] md:h-full bg-slate-100">
+            <main className={clsx(
+                "flex-1 relative bg-slate-100 transition-all duration-300 absolute md:relative inset-0 md:inset-auto h-full",
+                mobileView === "map" ? "z-10 translate-x-0" : "-z-10 md:z-auto opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto"
+            )}>
                 <Map
                     patients={displayedPatients}
                     selectedPatientId={selectedId}
@@ -366,12 +416,6 @@ export default function DayView({ initialRoute }: DayViewProps) {
                         <div className="flex items-center"><div className="w-2 h-2 rounded-full bg-slate-400 mr-2"></div> Patient en attente</div>
                     </div>
                 </div>
-
-                {/* Floating Card for Details (Desktop Overlay) - Optional, but sidebar is robust now so maybe redundant? 
-                    Actually, let's keep it minimal or verify if sidebar is enough. 
-                    The sidebar is wider now (450px), so it holds the details well.
-                    I will remove the massive floating card to avoid clutter, as the sidebar highlights the selected patient nicely.
-                */}
             </main>
         </div>
     );
