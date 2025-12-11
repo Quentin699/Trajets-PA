@@ -1,26 +1,64 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    background-image: radial-gradient(circle at 50% 0%, #f1f5f9 0%, #f8fafc 100%);
+    min-height: 100vh;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading font-bold;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-xl border border-white/50 shadow-lg shadow-slate-200/50;
+  }
+
+  .medical-card {
+    @apply bg-white rounded-2xl border border-slate-100 shadow-sm transition-all duration-200 hover:shadow-md hover:border-emerald-100;
+  }
+
+  .map-container {
+    height: 100%;
+    width: 100%;
+    z-index: 10;
+  }
+
+  .btn-primary {
+    @apply bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg shadow-emerald-200 shadow-lg hover:bg-emerald-600 hover:shadow-xl transition-all active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-slate-700 font-medium px-4 py-2 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-50 transition-all active:scale-95;
+  }
+}
+
+/* Custom Scrollbar for the sidebar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-300;
 }
